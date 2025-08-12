@@ -139,27 +139,30 @@
       table.innerHTML = "";
       items.filter(i => i.status === "pending").forEach(item => {
         const row = document.createElement("tr");
+        const deadline = item.deadline;
+        const formatted_deadline = new Date(deadline).toISOString().slice(0, 10);
+        alert(formatted_deadline);
         row.innerHTML = `
           <td>${item.name}</td>
           <td>¥${item.price}</td>
-          <td>${item.deadline}</td>
+          <td>${formatted_deadline}</td>
           <td>${item.status}</td>
           <td class="actions">
             <button class="done-btn" onclick="markAsDone(${item.id})">購入済み</button>
-            <button class="delete-btn" onclick="deleteItem(${item.id})">削除</button>
           </td>
         `;
+        // <button class="delete-btn" onclick="deleteItem(${item.id})">削除</button>
+        // const deleteBtn = row.querySelector(".delete-btn");
+        // deleteBtn.addEventListener("click", async () => {
+        //  await deleteItem(item.id);
+        //});
 
         // innerHTML で生成されたボタンを取得
         const doneBtn = row.querySelector(".done-btn");
-        const deleteBtn = row.querySelector(".delete-btn");
 
         // イベントバインド（非同期処理もOK）
         doneBtn.addEventListener("click", async () => {
           await markAsDone(item.id);
-        });
-        deleteBtn.addEventListener("click", async () => {
-          await deleteItem(item.id);
         });
 
         table.appendChild(row);
@@ -183,15 +186,10 @@
       await fetch(`https://usefultools.onrender.com/shelf/items/${id}`, {
         method: "DELETE"
       });
-
       renderItems();
     }
 
     async function addItem(name, price, deadline) {
-      // alert("addItem in");
-      // alert(name);
-      // alert(price);
-      // alert(deadline);
       // alert(JSON.stringify({ name, price, deadline }));
       await fetch(`https://usefultools.onrender.com/shelf/items`, {
         method: "POST",
@@ -233,7 +231,6 @@
         const formatted_deadline = dateObj.toISOString().slice(0, 10);
         await addItem(new_name, new_price, formatted_deadline);
       }
-      
       renderItems();
     });
 
