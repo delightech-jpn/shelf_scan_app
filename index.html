@@ -116,12 +116,10 @@
     <input type="text" id="new_name" placeholder="商品名を入力" oninput="validateForm()" />
     <input type="number" id="new_price" placeholder="最低価格を入力" oninput="validateForm()" />
     <input type="date" id="new_deadline" />
-    <button id="addItemButton" type="submit" disabled>品目を追加</button>
+    <button id="addItemButton" type="button" disabled>品目を追加</button>
   </div>
   <script>
     renderItems();
-
-    const API_BASE = "https://usefultools.onrender.com/shelf/items";
 
     async function renderItems() {
       const table = document.getElementById("item-table");
@@ -131,7 +129,7 @@
       loadingMsg.style.display = "block";
       wrapper.style.display = "none";
 
-      const res = await fetch(API_BASE);
+      const res = await fetch('https://usefultools.onrender.com/shelf/items');
       items = await res.json();
       //items = await simulateFetch();
 
@@ -151,13 +149,26 @@
             <button class="delete-btn" onclick="deleteItem(${item.id})">削除</button>
           </td>
         `;
+
+        // innerHTML で生成されたボタンを取得
+        const doneBtn = row.querySelector(".done-btn");
+        const deleteBtn = row.querySelector(".delete-btn");
+
+        // イベントバインド（非同期処理もOK）
+        doneBtn.addEventListener("click", async () => {
+          await markAsDone(item.id);
+        });
+        deleteBtn.addEventListener("click", async () => {
+          await deleteItem(item.id);
+        });
+
         table.appendChild(row);
       });
     }
 
     async function markAsDone(id) {
-      //alert("markAsDone in");
-      await fetch(`${API_BASE}/${id}`, {
+      alert("markAsDone in");
+      await fetch(`https://usefultools.onrender.com/shelf/items/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "done" })
@@ -166,10 +177,10 @@
     }
 
     async function deleteItem(id) {
-      //alert("deleteItem in");
+      alert("deleteItem in");
       if (!confirm("このアイテムを削除しますか？")) return;
 
-      await fetch(`${API_BASE}/${id}`, {
+      await fetch(`https://usefultools.onrender.com/shelf/items/${id}`, {
         method: "DELETE"
       });
 
@@ -178,7 +189,7 @@
 
     async function addItem(new_name, new_price, new_deadline) {
       //alert("addItem in");
-      await fetch(API_BASE, {
+      await fetch('https://usefultools.onrender.com/shelf/items', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ new_name, new_price, new_deadline })
@@ -205,13 +216,14 @@
       });
     }
 
-    document.getElementById("addForm").addEventListener("submit", async (e) => {
+    document.getElementById("addItemButton").addEventListener("click", async (e) => {
       e.preventDefault();
       const new_name = document.getElementById("new_name").value;
       const new_price = document.getElementById("new_price").value;
       const new_deadline = document.getElementById("new_deadline").value;
       await addItem(new_name, new_price, new_deadline);
-      document.getElementById("addForm").reset();
+      
+      renderItems();
     });
 
   </script>
