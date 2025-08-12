@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>購入予定品管理App</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    #loading-message {
+      text-align: center;
+      font-size: 1rem;
+      color: #666;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 0.6rem;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .actions button {
+      margin-right: 0.4rem;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.85rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .done-btn {
+      background-color: #4caf50;
+      color: white;
+    }
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+    }
+    .add-form {
+      margin-top: 1.5rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .add-form input {
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.95rem;
+    }
+    .add-form button {
+      width: 100%;
+      background-color: #2196f3;
+      color: white;
+      padding: 0.6rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 4px;
+    }
+    .add-form button:disabled {
+      background-color: #90caf9;
+      cursor: not-allowed;
+    }
+    @media (max-width: 600px) {
+      th, td {
+        font-size: 0.85rem;
+        padding: 0.4rem;
+      }
+      .actions button {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>購入予定品管理App</h1>
+
+  <div id="loading-message">読み込み中...</div>
+
+  <table style="display:none;" id="item-table-wrapper">
+    <thead>
+      <tr>
+        <th>商品名</th>
+        <th>価格</th>
+        <th>期限日</th>
+        <th>状態</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="item-table">
+      <!-- 品目行がここに表示される -->
+    </tbody>
+  </table>
+
+  <div class="add-form">
+    <input type="text" id="new_name" placeholder="商品名を入力" oninput="validateForm()" />
+    <input type="number" id="new_price" placeholder="最低価格を入力" oninput="validateForm()" />
+    <input type="date" id="new_deadline" />
+    <button id="addItemButton" type="submit" disabled>品目を追加</button>
+  </div>
+  <script>
+    renderItems();
+
+    const API_BASE = "https://usefultools.onrender.com/shelf/items";
+
+    async function renderItems() {
+      const table = document.getElementById("item-table");
+      const wrapper = document.getElementById("item-table-wrapper");
+      const loadingMsg = document.getElementById("loading-message");
+
+      loadingMsg.style.display = "block";
+      wrapper.style.display = "none";
+
+      const res = await fetch(API_BASE);
+      items = await res.json();
+      //items = await simulateFetch();
+
+      loadingMsg.style.display = "none";
+      wrapper.style.display = "table";
+
+      table.innerHTML = "";
+      items.filter(i => i.status === "pending").forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${item.name}</td>
+          <td>¥${item.price}</td>
+          <td>${item.deadline}</td>
+          <td>${item.status}</td>
+          <td class="actions">
+            <button class="done-btn" onclick="markAsDone(${item.id})">購入済み</button>
+            <button class="delete-btn" onclick="deleteItem(${item.id})">削除</button>
+          </td>
+        `;
+        table.appendChild(row);
+      });
+    }
+
+    async function markAsDone(id) {
+      //alert("markAsDone in");
+      await fetch(`${API_BASE}/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "done" })
+      });
+      renderItems();
+    }
+
+    async function deleteItem(id) {
+      //alert("deleteItem in");
+      if (!confirm("このアイテムを削除しますか？")) return;
+
+      await fetch(`${API_BASE}/${id}`, {
+        method: "DELETE"
+      });
+
+      renderItems();
+    }
+
+    async function addItem(new_name, new_price, new_deadline) {
+      //alert("addItem in");
+      await fetch(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_name, new_price, new_deadline })
+      });
+      renderItems();
+    }
+
+    function validateForm() {
+      const name = document.getElementById("new_name").value.trim();
+      const price = document.getElementById("new_price").value;
+      const addBtn = document.getElementById("addItemButton");
+      const isValid = name !== "" && price !== "" && !isNaN(parseInt(price));
+      addBtn.disabled = !isValid;
+    }
+
+    function simulateFetch() {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          resolve([
+            { id: 1, name: "乾電池", price: 300, deadline: "2025-08-15", status: "pending" },
+            { id: 2, name: "コピー用紙", price: 1200, deadline: "2025-08-20", status: "pending" },
+          ]);
+        }, 1000);
+      });
+    }
+
+    document.getElementById("addForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const new_name = document.getElementById("new_name").value;
+      const new_price = document.getElementById("new_price").value;
+      const new_deadline = document.getElementById("new_deadline").value;
+      await addItem(new_name, new_price, new_deadline);
+      document.getElementById("addForm").reset();
+    });
+
+  </script>
+</body>
+</html>
