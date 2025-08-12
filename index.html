@@ -90,6 +90,19 @@
         padding: 0.2rem 0.4rem;
       }
     }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ccc;
+      border-top: 2px solid #333;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-left: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -100,10 +113,10 @@
   <table style="display:none;" id="item-table-wrapper">
     <thead>
       <tr>
-        <th>商品名</th>
+        <th>商品</th>
         <th>価格</th>
-        <th>期限日</th>
-        <th>状態</th>
+        <th>期限</th>
+        <!-- <th>状態</th> -->
         <th>操作</th>
       </tr>
     </thead>
@@ -116,7 +129,10 @@
     <input type="text" id="new_name" placeholder="商品名を入力" oninput="validateForm()" />
     <input type="number" id="new_price" placeholder="最低価格を入力" oninput="validateForm()" />
     <input type="date" id="new_deadline" />
-    <button id="addItemButton" type="button" disabled>品目を追加</button>
+    <button id="addItemButton" class="action-btn" type="button" disabled>
+      <span class="btn-label">品目を追加</span>
+      <span class="spinner" style="display: none;"></span>
+    </button>
   </div>
   <script>
     renderItems();
@@ -141,16 +157,16 @@
         const row = document.createElement("tr");
         const deadline = item.deadline;
         const formatted_deadline = new Date(deadline).toISOString().slice(0, 10);
-        alert(formatted_deadline);
+        // alert(formatted_deadline);
         row.innerHTML = `
           <td>${item.name}</td>
           <td>¥${item.price}</td>
           <td>${formatted_deadline}</td>
-          <td>${item.status}</td>
           <td class="actions">
             <button class="done-btn" onclick="markAsDone(${item.id})">購入済み</button>
           </td>
         `;
+        //  <td>${item.status}</td>
         // <button class="delete-btn" onclick="deleteItem(${item.id})">削除</button>
         // const deleteBtn = row.querySelector(".delete-btn");
         // deleteBtn.addEventListener("click", async () => {
@@ -162,15 +178,16 @@
 
         // イベントバインド（非同期処理もOK）
         doneBtn.addEventListener("click", async () => {
-          await markAsDone(item.id);
+          await markAsDone(item.id, doneBtn);
         });
 
         table.appendChild(row);
       });
     }
 
-    async function markAsDone(id) {
-      alert("markAsDone in");
+    async function markAsDone(id, doneBtn) {
+      doneBtn.disabled = true;
+      doneBtn.cursor = "not-allowed";
       await fetch(`https://usefultools.onrender.com/shelf/items/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -180,7 +197,6 @@
     }
 
     async function deleteItem(id) {
-      alert("deleteItem in");
       if (!confirm("このアイテムを削除しますか？")) return;
 
       await fetch(`https://usefultools.onrender.com/shelf/items/${id}`, {
@@ -190,7 +206,6 @@
     }
 
     async function addItem(name, price, deadline) {
-      // alert(JSON.stringify({ name, price, deadline }));
       await fetch(`https://usefultools.onrender.com/shelf/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -218,22 +233,44 @@
       });
     }
 
-    document.getElementById("addItemButton").addEventListener("click", async (e) => {
-      e.preventDefault();
-      const new_name = document.getElementById("new_name").value;
-      const new_price = document.getElementById("new_price").value;
-      const new_deadline = document.getElementById("new_deadline").value;
-      if(new_deadline === ""){
-        await addItem(new_name, new_price, "");
+    function setLoading(isLoading) {
+      const addItemBtn = document.getElementById("addItemButton");
+      const label = addItemBtn.querySelector(".btn-label");
+      const spinner = addItemBtn.querySelector(".spinner");
+      if (isLoading) {
+        label.textContent = "追加中...";
+        spinner.style.display = "inline-block";
+      } else {
+        label.textContent = "品目を追加";
+        spinner.style.display = "none";
       }
-      else{
-        const dateObj = new Date(new_deadline);
-        const formatted_deadline = dateObj.toISOString().slice(0, 10);
-        await addItem(new_name, new_price, formatted_deadline);
-      }
-      renderItems();
-    });
+      addItemBtn.disabled = true;
+    }
 
+    document.getElementById("addItemButton").addEventListener("click", async (e) => {
+      setLoading(true);
+      try{
+        e.preventDefault();
+        const new_name = document.getElementById("new_name").value;
+        const new_price = document.getElementById("new_price").value;
+        const new_deadline = document.getElementById("new_deadline").value;
+        if(new_deadline === ""){
+          await addItem(new_name, new_price, "");
+        }
+        else{
+          const dateObj = new Date(new_deadline);
+          const formatted_deadline = dateObj.toISOString().slice(0, 10);
+          await addItem(new_name, new_price, formatted_deadline);
+        }
+        renderItems();
+        document.getElementById("new_name").value = "";
+        document.getElementById("new_price").value = "";
+        document.getElementById("new_deadline").value = "";
+      }
+      finally{
+        setLoading(false);
+      }
+    });
   </script>
 </body>
 </html>
